@@ -16,6 +16,8 @@ CELL_SIZE = 20
 FONT = ('system', '16')
 TILE_COLOUR = 'blue'
 
+BEST_PATH = "best.txt"
+
 EVENTS = {
     'a': engine.LEFT,
     'Left': engine.LEFT,
@@ -31,13 +33,15 @@ EVENTS = {
     'x': engine.QUIT,
 }
 
-GO_MSG = 'Game over. Final score: {}.\nPress r to restart or x to quit.'
+GO_MSG = 'Game over. Final score: {}\nYour current best: {}\nPress r to restart or x to quit.'
 
 
 class Tetris:
-    def __init__(self) -> None:
+    def __init__(self, current_best) -> None:
         self.running = False
         self.events: Deque[int] = deque()
+
+        self.best = current_best
 
         self.root = tk.Tk()
         self.canvas = tk.Canvas(
@@ -73,10 +77,15 @@ class Tetris:
         self.root.after(DELAY, self.fall)
         score = engine.play(engine.new_arena(COLS, ROWS))
         self.canvas.delete('score')
+
+        if score > self.best:
+        	self.best = score
+        	self.save_best()
+
         self.canvas.create_text(
             BORDER + (COLS + 2) * CELL_SIZE // 2,
             5 * BORDER // 2 + (ROWS + 1) * CELL_SIZE,
-            text=GO_MSG.format(score), font=FONT,
+            text=GO_MSG.format(score, self.best), font=FONT,
             justify=tk.CENTER, tags=('content', 'score')
         )
         self.running = False
@@ -120,9 +129,18 @@ class Tetris:
             self.root.update()
         return self.events.popleft()
 
+    def save_best(self) -> None:
+
+    	with open(BEST_PATH, "w") as f:
+    		f.write(str(self.best))
+
 
 def main() -> None:
-    tetris = Tetris()
+
+    with open(BEST_PATH, "r") as f:
+	    best = int(f.read())
+
+    tetris = Tetris(best)
 
     engine.draw = tetris.draw
     engine.poll_event = tetris.poll_event
