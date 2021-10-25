@@ -14,7 +14,10 @@ DELAY = 1000  # how often shall DOWN happen automatically; in milliseconds
 BORDER = 32
 CELL_SIZE = 20
 FONT = ('system', '16')
-TILE_COLOUR = 'blue'
+TILE_COLOUR = 'green'
+BG_COLOUR = "black"
+TEXT_COLOUR = "white"
+MARGIN_COLOUR = "white"
 
 BEST_PATH = "best.txt"
 
@@ -48,6 +51,7 @@ class Tetris:
             width=2 * BORDER + (COLS + 2) * CELL_SIZE,
             height=4 * BORDER + (ROWS + 1) * CELL_SIZE,
         )
+        self.canvas.config(bg = BG_COLOUR)
         self.draw_border()
         self.canvas.pack()
 
@@ -58,13 +62,13 @@ class Tetris:
             self.canvas.create_rectangle(
                 x, BORDER,
                 x + CELL_SIZE, BORDER + (ROWS + 1) * CELL_SIZE,
-                fill='black'
+                fill= MARGIN_COLOUR
             )
 
         self.canvas.create_rectangle(
             BORDER, BORDER + ROWS * CELL_SIZE,
             BORDER + (COLS + 2) * CELL_SIZE, BORDER + (ROWS + 1) * CELL_SIZE,
-            fill='black'
+            fill= MARGIN_COLOUR
         )
 
     def start(self) -> None:
@@ -85,8 +89,8 @@ class Tetris:
         self.canvas.create_text(
             BORDER + (COLS + 2) * CELL_SIZE // 2,
             5 * BORDER // 2 + (ROWS + 1) * CELL_SIZE,
-            text=GO_MSG.format(score, self.best), font=FONT,
-            justify=tk.CENTER, tags=('content', 'score')
+            text=GO_MSG.format(score, self.best), fill = TEXT_COLOUR, 
+            font=FONT, justify=tk.CENTER, tags=('content', 'score')
         )
         self.running = False
 
@@ -120,7 +124,7 @@ class Tetris:
         self.canvas.create_text(
             BORDER + (COLS + 2) * CELL_SIZE // 2,
             5 * BORDER // 2 + (ROWS + 1) * CELL_SIZE,
-            text=f"Score: {score}", font=FONT, tags=('content', 'score')
+            text=f"Score: {score}", font=FONT,  fill = TEXT_COLOUR, tags=('content', 'score')
         )
 
     def poll_event(self) -> int:
