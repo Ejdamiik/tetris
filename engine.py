@@ -57,13 +57,13 @@ def new_arena(cols: int, rows: int) -> Arena:
 
 def is_occupied(arena: Arena, x: int, y: int) -> bool:
 
-    # occupied -- True
     if 0 > y or y > len(arena) - 1:
         return True
 
     if 0 > x or x > len(arena[0]) - 1:
         return True
 
+    # coords in reversed order bcs of matrix coords work reversed
     return arena[y][x]
 
 
@@ -74,7 +74,6 @@ def set_occupied(arena: Arena, x: int, y: int, occupied: bool) -> None:
 
 def draw(arena: Arena, score: int) -> None:
 
-    # Desk
     for row in arena:
 
         print(WALL, end="")
@@ -87,10 +86,8 @@ def draw(arena: Arena, score: int) -> None:
 
         print(WALL)
 
-    # Lower border
     print((len(arena[0]) + 2) * WALL)
 
-    # Score
     spaces = 2 * len(arena[0]) - len("Score:") - len(str(score))
     print("  " + "Score:" + (spaces * " ") + str(score))
 
@@ -102,34 +99,47 @@ def next_block() -> Block:
 
 def poll_event() -> int:
 
-    return None
+    # Not really implemented (no need to)
+    return 2
 
 
-def get_initial_head(arena: Arena, block: Block) -> Anchor:
+def get_initial_anchor(arena: Arena, block: Block) -> Anchor:
+    """
+    Function to get real position of anchor at the beginning
+    """
 
     columns = len(arena[0])
 
     y_min = min(block, key=lambda x: x[1])[1]
 
-    middle = columns // 2
+    x_min = min(block, key=lambda x: x[0])[0]
+    x_max = max(block, key=lambda x: x[0])[0]
+    block_width = x_max - x_min
 
-    head_x = middle - 1
-    head_y = -y_min
+    width_diff = columns - block_width
 
-    head = (head_x, head_y)
-    return head
+    padding = width_diff // 2
+
+    # padding to the left
+    if columns % 2 != 0:
+        padding -= 1
+
+    anchor_x = -x_min + padding
+    anchor_y = -y_min
+
+    return (anchor_x, anchor_y)
 
 
-def get_real_pos(block: Block, head: Anchor) -> Block:
+def get_real_pos(block: Block, anchor: Anchor) -> Block:
 
     real = []
 
-    head_x, head_y = head
+    anchor_x, anchor_y = anchor
 
     for x, y in block:
 
-        real_x = x + head_x
-        real_y = y + head_y
+        real_x = x + anchor_x
+        real_y = y + anchor_y
 
         real.append((real_x, real_y))
 
@@ -161,13 +171,13 @@ def delete_from_arena(arena: Arena, real_block: Block) -> None:
 
 def move(arena: Arena,
          block: Block,
-         head: Anchor,
+         anchor: Anchor,
          direction: Tuple[int, int],
          rotate_type: int = 0) -> Tuple[Anchor, Block]:
 
     dx, dy = direction
-    x, y = head
-    old = get_real_pos(block, head)
+    x, y = anchor
+    old = get_real_pos(block, anchor)
     delete_from_arena(arena, old)
 
     old_block = block
@@ -179,19 +189,20 @@ def move(arena: Arena,
         block = rotate_ccw(block)
 
     else:
-        head = x + dx, y + dy
+        anchor = x + dx, y + dy
 
-    new = get_real_pos(block, head)
+    new = get_real_pos(block, anchor)
 
     status = check_availibility(arena, new)
 
+    # If we cannot add new block, we add back the old one
     if status is False:
         add_to_arena(arena, old)
         return (x, y), old_block
 
     add_to_arena(arena, new)
 
-    return head, block
+    return anchor, block
 
 
 def eval_score(arena: Arena, score: int) -> int:
@@ -224,8 +235,8 @@ def play(arena: Arena) -> int:
     while True:
 
         current_block = next_block()
-        head = get_initial_head(arena, current_block)
-        real = get_real_pos(current_block, head)
+        anchor = get_initial_anchor(arena, current_block)
+        real = get_real_pos(current_block, anchor)
 
         status = check_availibility(arena, real)
         if status is False:
@@ -241,51 +252,54 @@ def play(arena: Arena) -> int:
             draw(arena, score)
             event = poll_event()
 
-            old_head = head
+            old_anchor = anchor
+            # From every 'move' event we gen new position of anchor and
+            # current block type
             if event == DOWN:
 
-                head, current_block = move(
-                    arena, current_block, old_head, (0, 1))
+                anchor, current_block = move(
+                    arena, current_block, old_anchor, (0, 1))
 
-                if old_head == head:
+                if old_anchor == anchor:
 
                     active = False
 
             elif event == DROP:
 
-                head, current_block = move(
-                    arena, current_block, old_head, (0, 1))
+                anchor, current_block = move(
+                    arena, current_block, old_anchor, (0, 1))
 
-                while head != old_head:
+                while anchor != old_anchor:
 
-                    old_head = head
-                    head, current_block = move(
-                        arena, current_block, old_head, (0, 1))
+                    old_anchor = anchor
+                    anchor, current_block = move(
+                        arena, current_block, old_anchor, (0, 1))
 
                 active = False
 
             elif event == LEFT:
 
-                head, current_block = move(
-                    arena, current_block, old_head, (-1, 0))
+                anchor, current_block = move(
+                    arena, current_block, old_anchor, (-1, 0))
 
             elif event == RIGHT:
 
-                head, current_block = move(
-                    arena, current_block, old_head, (1, 0))
+                anchor, current_block = move(
+                    arena, current_block, old_anchor, (1, 0))
 
             elif event == ROTATE_CW:
 
-                head, current_block = move(
-                    arena, current_block, head, (0, 0), 1)
+                anchor, current_block = move(
+                    arena, current_block, anchor, (0, 0), 1)
 
             elif event == ROTATE_CCW:
 
-                head, current_block = move(
-                    arena, current_block, head, (0, 0), 2)
+                anchor, current_block = move(
+                    arena, current_block, anchor, (0, 0), 2)
 
             elif event == QUIT:
                 draw(arena, score)
                 return score
 
-            score = eval_score(arena, score)
+        # Evaluating score when block gets inactive
+        score = eval_score(arena, score)
