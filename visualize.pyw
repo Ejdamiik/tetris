@@ -16,8 +16,8 @@ CELL_SIZE = 20
 FONT = ('system', '16')
 TILE_COLOUR = 'green'
 BG_COLOUR = "black"
-TEXT_COLOUR = "white"
-MARGIN_COLOUR = "white"
+TEXT_COLOUR = "purple"
+MARGIN_COLOUR = "purple"
 
 BEST_PATH = "best.txt"
 
