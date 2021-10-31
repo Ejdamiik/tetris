@@ -214,34 +214,27 @@ def eval_score(arena: Arena, score: int) -> int:
                 first_filled = row_i
 
             filled += 1
-            last_filled = row_i
             clear_row(arena, row_i)
 
     score += filled ** 2
 
     if first_filled:
-        move_rows(arena, first_filled - 1, last_filled)
+        move_rows(arena, first_filled - 1, filled)
     return score
 
 
 def move_rows(
-        arena: Arena, last_row_to_move: int, last_able_row: int
-        ) -> None:
+        arena: Arena, last_row_to_move: int,
+        filled_count: int
+) -> None:
 
     for row_i in range(last_row_to_move, -1, -1):
-
+        y = row_i
         for column_i in range(len(arena[0])):
-
             x = column_i
-            y = row_i
-
-            occupation_status = is_occupied(arena, x, y)
+            occupation = is_occupied(arena, x, y)
             set_occupied(arena, x, y, False)
-
-            while not is_occupied(arena, x, y) and y <= last_able_row:
-                y += 1
-
-            set_occupied(arena, x, y - 1, occupation_status)
+            set_occupied(arena, x, y + filled_count, occupation)
 
 
 def clear_row(arena: Arena, row_i: int) -> None:

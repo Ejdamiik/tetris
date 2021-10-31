@@ -114,15 +114,11 @@ def get_initial_anchor(arena: Arena, block: Block) -> Anchor:
 
     x_min = min(block, key=lambda x: x[0])[0]
     x_max = max(block, key=lambda x: x[0])[0]
-    block_width = x_max - x_min
+    block_width = x_max - x_min + 1
 
     width_diff = columns - block_width
 
     padding = width_diff // 2
-
-    # padding to the left
-    if columns % 2 != 0:
-        padding -= 1
 
     anchor_x = -x_min + padding
     anchor_y = -y_min
@@ -208,16 +204,37 @@ def move(arena: Arena,
 def eval_score(arena: Arena, score: int) -> int:
 
     filled = 0
+    first_filled = None
 
     for row_i in range(len(arena)):
 
         if False not in arena[row_i]:
+
+            if filled == 0:
+                first_filled = row_i
+
             filled += 1
             clear_row(arena, row_i)
 
     score += filled ** 2
 
+    if first_filled:
+        move_rows(arena, first_filled - 1, filled)
     return score
+
+
+def move_rows(
+        arena: Arena, last_row_to_move: int,
+        filled_count: int
+) -> None:
+
+    for row_i in range(last_row_to_move, -1, -1):
+        y = row_i
+        for column_i in range(len(arena[0])):
+            x = column_i
+            occupation = is_occupied(arena, x, y)
+            set_occupied(arena, x, y, False)
+            set_occupied(arena, x, y + filled_count, occupation)
 
 
 def clear_row(arena: Arena, row_i: int) -> None:
