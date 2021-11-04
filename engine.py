@@ -204,28 +204,22 @@ def move(arena: Arena,
 def eval_score(arena: Arena, score: int) -> int:
 
     filled = 0
-    first_filled = None
 
     for row_i in range(len(arena)):
 
         if False not in arena[row_i]:
 
-            if filled == 0:
-                first_filled = row_i
-
-            filled += 1
             clear_row(arena, row_i)
+            move_rows(arena, row_i - 1)
+            filled += 1
 
     score += filled ** 2
 
-    if first_filled:
-        move_rows(arena, first_filled - 1, filled)
     return score
 
 
 def move_rows(
         arena: Arena, last_row_to_move: int,
-        filled_count: int
 ) -> None:
 
     for row_i in range(last_row_to_move, -1, -1):
@@ -234,7 +228,7 @@ def move_rows(
             x = column_i
             occupation = is_occupied(arena, x, y)
             set_occupied(arena, x, y, False)
-            set_occupied(arena, x, y + filled_count, occupation)
+            set_occupied(arena, x, y + 1, occupation)
 
 
 def clear_row(arena: Arena, row_i: int) -> None:
