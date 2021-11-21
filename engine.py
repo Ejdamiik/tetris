@@ -31,40 +31,24 @@ def coords(block_type: int) -> Block:
 
 def rotate_cw(coords: Block) -> Block:
 
-    new = []
-
-    for x, y in coords:
-        new.append((-y, x))
-
-    return new
+    return [(-y, x) for x, y in coords]
 
 
 def rotate_ccw(coords: Block) -> Block:
 
-    new = []
-
-    for x, y in coords:
-        new.append((y, -x))
-
-    return new
+    return [(y, -x) for x, y in coords]
 
 
 def new_arena(cols: int, rows: int) -> Arena:
 
-    arena = [[False for i in range(cols)] for j in range(rows)]
-    return arena
+    return [[False] * cols for j in range(rows)]
 
 
 def is_occupied(arena: Arena, x: int, y: int) -> bool:
 
-    if 0 > y or y > len(arena) - 1:
-        return True
-
-    if 0 > x or x > len(arena[0]) - 1:
-        return True
-
-    # coords in reversed order bcs of matrix coords work reversed
-    return arena[y][x]
+    return (0 > y or y > len(arena) - 1) \
+        or (0 > x or x > len(arena[0]) - 1) \
+        or arena[y][x]
 
 
 def set_occupied(arena: Arena, x: int, y: int, occupied: bool) -> None:
@@ -79,10 +63,7 @@ def draw(arena: Arena, score: int) -> None:
         print(WALL, end="")
 
         for e in row:
-            if e:
-                print(SQUARE, end="")
-            else:
-                print(EMPTY,  end="")
+            print(SQUARE, end="") if e else print(EMPTY,  end="")
 
         print(WALL)
 
@@ -126,27 +107,11 @@ def get_initial_anchor(arena: Arena, block: Block) -> Anchor:
     return (anchor_x, anchor_y)
 
 
-def get_real_pos(block: Block, anchor: Anchor) -> Block:
-
-    real = []
+def shift_block(block: Block, anchor: Anchor) -> Block:
 
     anchor_x, anchor_y = anchor
 
-    for x, y in block:
-
-        real_x = x + anchor_x
-        real_y = y + anchor_y
-
-        real.append((real_x, real_y))
-
-    return real
-
-
-def add_to_arena(arena: Arena, real_block: Block) -> None:
-
-    for x, y in real_block:
-
-        set_occupied(arena, x, y, True)
+    return [(x + anchor_x, y + anchor_y) for x, y in block]
 
 
 def check_availibility(arena: Arena, real_block: Block) -> bool:
@@ -159,57 +124,56 @@ def check_availibility(arena: Arena, real_block: Block) -> bool:
     return True
 
 
-def delete_from_arena(arena: Arena, real_block: Block) -> None:
+def modify_arena(arena: Arena, real_block: Block, status: bool) -> None:
 
     for x, y in real_block:
-        set_occupied(arena, x, y, False)
+
+        set_occupied(arena, x, y, status)
 
 
 def move(arena: Arena,
          block: Block,
          anchor: Anchor,
          direction: Tuple[int, int],
-         rotate_type: int = 0) -> Tuple[Anchor, Block]:
+         event: int) -> Tuple[Anchor, Block]:
 
     dx, dy = direction
     x, y = anchor
-    old = get_real_pos(block, anchor)
-    delete_from_arena(arena, old)
+    old = shift_block(block, anchor)
+    modify_arena(arena, old, False)
 
     old_block = block
 
-    if rotate_type == 1:
+    if event == 2:
         block = rotate_cw(block)
 
-    elif rotate_type == 2:
+    elif event == 3:
         block = rotate_ccw(block)
 
     else:
         anchor = x + dx, y + dy
 
-    new = get_real_pos(block, anchor)
-
-    status = check_availibility(arena, new)
+    new = shift_block(block, anchor)
 
     # If we cannot add new block, we add back the old one
-    if status is False:
-        add_to_arena(arena, old)
+    if not check_availibility(arena, new):
+        modify_arena(arena, old, True)
         return (x, y), old_block
 
-    add_to_arena(arena, new)
+    modify_arena(arena, new, True)
 
     return anchor, block
 
 
-def eval_score(arena: Arena, score: int) -> int:
+def eval_score(arena: Arena) -> int:
 
+    score = 0
     filled = 0
 
     for row_i in range(len(arena)):
 
         if False not in arena[row_i]:
 
-            clear_row(arena, row_i)
             move_rows(arena, row_i - 1)
             filled += 1
 
@@ -222,20 +186,14 @@ def move_rows(
         arena: Arena, last_row_to_move: int,
 ) -> None:
 
-    for row_i in range(last_row_to_move, -1, -1):
-        y = row_i
-        for column_i in range(len(arena[0])):
-            x = column_i
-            occupation = is_occupied(arena, x, y)
-            set_occupied(arena, x, y, False)
-            set_occupied(arena, x, y + 1, occupation)
+    width = len(arena[0])
+    for y in range(last_row_to_move, -1, -1):
 
+        row = arena[y].copy()
 
-def clear_row(arena: Arena, row_i: int) -> None:
-
-    for col in range(len(arena[0])):
-
-        set_occupied(arena, col, row_i, False)
+        # Clearing row
+        arena[y] = [False] * width
+        arena[y + 1] = row
 
 
 def play(arena: Arena) -> int:
@@ -247,14 +205,13 @@ def play(arena: Arena) -> int:
 
         current_block = next_block()
         anchor = get_initial_anchor(arena, current_block)
-        real = get_real_pos(current_block, anchor)
+        real = shift_block(current_block, anchor)
 
-        status = check_availibility(arena, real)
-        if status is False:
+        if not check_availibility(arena, real):
             draw(arena, score)
             return score
 
-        add_to_arena(arena, real)
+        modify_arena(arena, real, True)
 
         active = True
 
@@ -269,7 +226,7 @@ def play(arena: Arena) -> int:
             if event == DOWN:
 
                 anchor, current_block = move(
-                    arena, current_block, old_anchor, (0, 1))
+                    arena, current_block, old_anchor, (0, 1), 4)
 
                 if old_anchor == anchor:
 
@@ -277,40 +234,39 @@ def play(arena: Arena) -> int:
 
             elif event == DROP:
 
-                anchor, current_block = move(
-                    arena, current_block, old_anchor, (0, 1))
+                first = True
 
-                while anchor != old_anchor:
+                while anchor != old_anchor or first:
 
                     old_anchor = anchor
                     anchor, current_block = move(
-                        arena, current_block, old_anchor, (0, 1))
+                        arena, current_block, old_anchor, (0, 1), 5)
+                    first = False
 
                 active = False
 
             elif event == LEFT:
 
                 anchor, current_block = move(
-                    arena, current_block, old_anchor, (-1, 0))
+                    arena, current_block, old_anchor, (-1, 0), 0)
 
             elif event == RIGHT:
 
                 anchor, current_block = move(
-                    arena, current_block, old_anchor, (1, 0))
+                    arena, current_block, old_anchor, (1, 0), 1)
 
             elif event == ROTATE_CW:
 
                 anchor, current_block = move(
-                    arena, current_block, anchor, (0, 0), 1)
+                    arena, current_block, anchor, (0, 0), 2)
 
             elif event == ROTATE_CCW:
 
                 anchor, current_block = move(
-                    arena, current_block, anchor, (0, 0), 2)
+                    arena, current_block, anchor, (0, 0), 3)
 
             elif event == QUIT:
                 draw(arena, score)
                 return score
-
         # Evaluating score when block gets inactive
-        score = eval_score(arena, score)
+        score += eval_score(arena)
